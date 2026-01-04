@@ -315,22 +315,35 @@ export async function POST(req) {
       }
 
       if (data.startsWith("subscribe:")) {
-        const planId = data.split(":")[1];
-        const plan = await getPlanById(planId);
-        if (!plan) {
-          await sendMessage(chatId, "Тариф не найден.", backToMenuKeyboard());
-          return new Response("ok");
-        }
+  const planId = data.split(":")[1];
+  const plan = await getPlanById(planId);
+  if (!plan) {
+    await sendMessage(chatId, "Тариф не найден.", backToMenuKeyboard());
+    return new Response("ok");
+  }
 
-        const sub = await createOrUpdateSubscription(userId, planId);
+  const manager = process.env.MANAGER_TG || "";
+  const managerLine = manager
+    ? `\n\nМенеджер: ${manager}`
+    : "";
 
-        await sendMessage(
-          chatId,
-          `✅ Подписка оформлена!\nТариф: ${sub.plan}\nСтатус: ${sub.status}\n\nНапиши «📌 Моя подписка» или /status.`,
-          mainMenuKeyboard()
-        );
-        return new Response("ok");
-      }
+  await sendMessage(
+    chatId,
+    `🧾 Заявка на подписку принята.\n\nТариф: ${plan.title}\nЦена: ${plan.price_rub}₽\n\nЧтобы получить ссылку на оплату — обратитесь к менеджеру.${managerLine}`,
+    {
+      inline_keyboard: [
+        ...(manager && manager.startsWith("https://t.me/")
+          ? [[{ text: "💬 Написать менеджеру", url: manager }]]
+          : []),
+        [{ text: "⬅️ Назад к тарифам", callback_data: "plans" }],
+        [{ text: "🏠 В меню", callback_data: "menu" }]
+      ],
+    }
+  );
+
+  // ВАЖНО: подписку в базе пока НЕ создаём (тестируем флоу)
+  return new Response("ok");
+}
 
       return new Response("ok");
     }
